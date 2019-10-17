@@ -236,9 +236,12 @@ Resources:
         Memory: 1024
         Image: 'asakchris/aws-hazelcast-hazelcast-server:1.0-SNAPSHOT'
         PortMappings:
-        - ContainerPort: 8000
-        - ContainerPort: 8001
-        - ContainerPort: 5701
+          - ContainerPort: 8000
+          - ContainerPort: 8001
+          - ContainerPort: 5701
+        Environment:
+          - Name: JAVA_OPTS
+            Value: -Dspring.hazelcast.config=classpath:hazelcast-aws.xml
         LogConfiguration:
           LogDriver: awslogs
           Options:
