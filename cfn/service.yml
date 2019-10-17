@@ -135,7 +135,7 @@ Resources:
   ECSTaskExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: ECS-TASK-EXEC-ROLE
+      RoleName: HZ-ECS-TASK-EXEC-ROLE
       AssumeRolePolicyDocument:
         Statement:
         - Effect: Allow
@@ -165,7 +165,7 @@ Resources:
   ECSTaskRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: ECS-TASK-ROLE
+      RoleName: HZ-ECS-TASK-ROLE
       AssumeRolePolicyDocument:
         Statement:
         - Effect: 'Allow'
