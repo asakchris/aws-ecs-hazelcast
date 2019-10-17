@@ -1,0 +1,274 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This stack creates ECS cluster with hazelcast server
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: The VPC in which Fargate container tasks run
+  PublicSubnetList:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at least two public subnets in given VPC to deploy ALB
+  PrivateSubnetList:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Select at least two private subnets in given VPC where Fargate run tasks
+Resources:
+  # Load balancer security group
+  LoadBalancerSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: LOAD-BALANCER-SG
+      GroupDescription: Access to the public facing load balancer
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Allow access to ALB from anywhere on the internet
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: '0.0.0.0/0'
+          Description: Allow HTTP
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIpv6: '::/0'
+          Description: Allow HTTP
+  # Container security group
+  ContainerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: HZ-CONTAINER-SG
+      GroupDescription: Access to the HZ container
+      VpcId: !Ref VpcId
+  # Allow traffic from load balancer into container
+  ContainerSecurityGroupIngressFromALB:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from the public Load balancer
+      GroupId: !Ref 'ContainerSecurityGroup'
+      IpProtocol: tcp
+      FromPort: 8000
+      ToPort: 8001
+      SourceSecurityGroupId: !Ref 'LoadBalancerSG'
+  # Allow traffic from one container into another, so that welcome service can reach message service using service discovery DNS URL
+  ContainerSecurityGroupIngressFromSelf:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from other containers in the same security group
+      GroupId: !Ref 'ContainerSecurityGroup'
+      IpProtocol: tcp
+      FromPort: 8000
+      ToPort: 8000
+      SourceSecurityGroupId: !Ref 'ContainerSecurityGroup'
+  ContainerSecurityGroupIngressFromSelfHz:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      Description: Ingress from other containers in the same security group on hz port
+      GroupId: !Ref 'ContainerSecurityGroup'
+      IpProtocol: tcp
+      FromPort: 5701
+      ToPort: 5701
+      SourceSecurityGroupId: !Ref 'ContainerSecurityGroup'
+
+  # Application load balancer for getting traffic to containers
+  AppLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: APP-ALB
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+      - Key: idle_timeout.timeout_seconds
+        Value: '60'
+      Subnets: !Ref PublicSubnetList
+      SecurityGroups: [!Ref 'LoadBalancerSG']
+  # This target group is used to setup the ALB to just drop traffic initially, before any real service target groups have been added
+  AppLoadBalancerDummyTG:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: APP-DUMMY-TG
+      HealthCheckIntervalSeconds: 150
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 120
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref VpcId
+  AppLoadBalancerListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn:
+    - AppLoadBalancer
+    Properties:
+      DefaultActions:
+      - TargetGroupArn: !Ref 'AppLoadBalancerDummyTG'
+        Type: 'forward'
+      LoadBalancerArn: !Ref 'AppLoadBalancer'
+      Port: 80
+      Protocol: HTTP
+  # When HZ server container comes up, it will register in this target group
+  HzServerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: HZ-SERVER-TG
+      HealthCheckIntervalSeconds: 150
+      HealthCheckPath: /actuator/health
+      HealthCheckPort: 8001
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 120
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      TargetType: ip
+      Port: 8000
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+  HzServerLoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+      - TargetGroupArn: !Ref 'HzServerTargetGroup'
+        Type: 'forward'
+      Conditions:
+      - Field: path-pattern
+        Values: ['*']
+      ListenerArn: !Ref AppLoadBalancerListener
+      Priority: 3
+
+  # This is a role which is used by the ECS tasks themselves.
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ECS-TASK-EXEC-ROLE
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Path: /
+      Policies:
+      - PolicyName: ECSTaskExecutionRolePolicy
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              # Allow the ECS Tasks to download images from ECR
+              - 'ecr:GetAuthorizationToken'
+              - 'ecr:BatchCheckLayerAvailability'
+              - 'ecr:GetDownloadUrlForLayer'
+              - 'ecr:BatchGetImage'
+
+              # Allow the ECS tasks to upload logs to CloudWatch
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource: '*'
+
+  # IAM role to give the service's containers if the code within needs to access other AWS resources
+  # like ECS tasks, S3 buckets etc
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: ECS-TASK-ROLE
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: 'Allow'
+          Principal:
+            Service: [ecs-tasks.amazonaws.com]
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName: ECSServiceDiscovery
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+              # Allow ECS container to access ECS tasks
+              - 'ecs:ListTasks'
+              - 'ecs:DescribeTasks'
+            Resource: '*'
+
+  # HZ Discovery POC ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: HZ-DISCOVERY-ECS-CLUSTER
+
+  # Cloud watch log group to which HZ server container send logs
+  HzServerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ECS/hz-server'
+      RetentionInDays: 7
+
+  # Private namespace for services
+  HzPrivateNamespace:
+    Type: AWS::ServiceDiscovery::PrivateDnsNamespace
+    Properties:
+      Name: hz-discovery
+      Vpc: !Ref VpcId
+
+  # Service discovery for message service, DnsConfig property specifies the DNS records that are automatically created
+  # in Amazon Route 53 when your Amazon ECS task is registered with the service discovery service
+  HzServerDiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the HZ server service
+      Name: hz-server-service
+      NamespaceId: !Ref HzPrivateNamespace
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 60
+            Type: A
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+  # Metadata description of what message container to run and what resource requirements it has
+  HzServerTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: HZ-SERVER-TD
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+      - FARGATE
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
+      TaskRoleArn: !Ref ECSTaskRole
+      ContainerDefinitions:
+      - Name: HZ-SERVER-CONTAINER
+        Cpu: 512
+        Memory: 1024
+        Image: 'asakchris/aws-hazelcast-hazelcast-server:1.0-SNAPSHOT'
+        PortMappings:
+        - ContainerPort: 8000
+        - ContainerPort: 8001
+        - ContainerPort: 5701
+        LogConfiguration:
+          LogDriver: awslogs
+          Options:
+            awslogs-group: !Ref HzServerLogGroup
+            awslogs-region: !Ref AWS::Region
+            awslogs-stream-prefix: ecs
+  # Service is a resource which allows to run multiple copies of a type of task, and gather up their logs and metrics,
+  # as well as monitor the number of running tasks and replace any that have crashed
+  HzServerECSService:
+    Type: AWS::ECS::Service
+    DependsOn: HzServerLoadBalancerRule
+    Properties:
+      ServiceName: HZ-SERVER-SERVICE
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: 2
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+          - !Ref ContainerSecurityGroup
+          Subnets: !Ref PrivateSubnetList
+      TaskDefinition: !Ref MessageTaskDefinition
+      LoadBalancers:
+      - ContainerName: HZ-SERVER-CONTAINER
+        ContainerPort: 8000
+        TargetGroupArn: !Ref HzServerTargetGroup
+      ServiceRegistries:
+      - RegistryArn: !GetAtt HzServerDiscoveryService.Arn
+        ContainerPort: 5701
