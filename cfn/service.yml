@@ -129,7 +129,34 @@ Resources:
       - Field: path-pattern
         Values: ['*']
       ListenerArn: !Ref AppLoadBalancerListener
-      Priority: 3
+      Priority: 2
+  # When HZ server container comes up, it will register in this target group
+  HzClientTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: HZ-CLIENT-TG
+      HealthCheckIntervalSeconds: 150
+      HealthCheckPath: /actuator/health
+      HealthCheckPort: 8001
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 120
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      TargetType: ip
+      Port: 8000
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+  HzClientLoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref 'HzClientTargetGroup'
+          Type: 'forward'
+      Conditions:
+        - Field: path-pattern
+          Values: ['/api/v1/hz/client/**']
+      ListenerArn: !Ref AppLoadBalancerListener
+      Priority: 1
 
   # This is a role which is used by the ECS tasks themselves.
   ECSTaskExecutionRole:
@@ -189,13 +216,6 @@ Resources:
     Properties:
       ClusterName: HZ-DISCOVERY-ECS-CLUSTER
 
-  # Cloud watch log group to which HZ server container send logs
-  HzServerLogGroup:
-    Type: AWS::Logs::LogGroup
-    Properties:
-      LogGroupName: !Sub '/ECS/hz-server'
-      RetentionInDays: 7
-
   # Private namespace for services
   HzPrivateNamespace:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
@@ -218,6 +238,12 @@ Resources:
             Type: A
       HealthCheckCustomConfig:
         FailureThreshold: 1
+  # Cloud watch log group to which HZ server container send logs
+  HzServerLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ECS/hz-server'
+      RetentionInDays: 7
   # Metadata description of what message container to run and what resource requirements it has
   HzServerTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -274,3 +300,65 @@ Resources:
         TargetGroupArn: !Ref HzServerTargetGroup
       ServiceRegistries:
         - RegistryArn: !GetAtt HzServerDiscoveryService.Arn
+
+  # Cloud watch log group to which HZ client container send logs
+  HzClientLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ECS/hz-client'
+      RetentionInDays: 7
+  # Metadata description of what message container to run and what resource requirements it has
+  HzClientTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: HZ-CLIENT-TD
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
+      TaskRoleArn: !Ref ECSTaskRole
+      ContainerDefinitions:
+        - Name: HZ-CLIENT-CONTAINER
+          Cpu: 512
+          Memory: 1024
+          Image: 'asakchris/aws-hazelcast-hazelcast-client:1.0-SNAPSHOT'
+          PortMappings:
+            - ContainerPort: 8000
+            - ContainerPort: 8001
+          Environment:
+            - Name: JAVA_OPTS
+              Value: -Dspring.hazelcast.config=classpath:hazelcast-client-aws.xml
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref HzClientLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+  # Service is a resource which allows to run multiple copies of a type of task, and gather up their logs and metrics,
+  # as well as monitor the number of running tasks and replace any that have crashed
+  HzClientECSService:
+    Type: AWS::ECS::Service
+    DependsOn:
+      - HzClientLoadBalancerRule
+      - HzServerECSService
+    Properties:
+      ServiceName: HZ-CLIENT-SERVICE
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: 2
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ContainerSecurityGroup
+          Subnets: !Ref PrivateSubnetList
+      TaskDefinition: !Ref HzClientTaskDefinition
+      LoadBalancers:
+        - ContainerName: HZ-CLIENT-CONTAINER
+          ContainerPort: 8000
+          TargetGroupArn: !Ref HzClientTargetGroup
