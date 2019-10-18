@@ -18,6 +18,9 @@
 
     <network>
         <port>5701</port>
+        <interfaces enabled="true">
+            <interface>10.0.*.*</interface>
+        </interfaces>
         <join>
             <multicast enabled="false"/>
             <discovery-strategies>
