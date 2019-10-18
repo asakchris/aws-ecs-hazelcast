@@ -11,6 +11,8 @@
         <name>dev</name>
         <password>dev-pass</password>
     </group>
+
+    <management-center enabled="true">http://hz-mgmt-service.hz-discovery:8080/hazelcast-mancenter</management-center>
     
     <properties>
         <property name="hazelcast.discovery.enabled">true</property>

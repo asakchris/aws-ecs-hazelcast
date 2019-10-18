@@ -44,8 +44,8 @@ Resources:
       Description: Ingress from the public Load balancer
       GroupId: !Ref 'ContainerSecurityGroup'
       IpProtocol: tcp
-      FromPort: 8000
-      ToPort: 8001
+      FromPort: 8080
+      ToPort: 8081
       SourceSecurityGroupId: !Ref 'LoadBalancerSG'
   # Allow traffic from one container into another, so that welcome service can reach message service using service discovery DNS URL
   ContainerSecurityGroupIngressFromSelf:
@@ -54,8 +54,8 @@ Resources:
       Description: Ingress from other containers in the same security group
       GroupId: !Ref 'ContainerSecurityGroup'
       IpProtocol: tcp
-      FromPort: 8000
-      ToPort: 8000
+      FromPort: 8080
+      ToPort: 8080
       SourceSecurityGroupId: !Ref 'ContainerSecurityGroup'
   ContainerSecurityGroupIngressFromSelfHz:
     Type: AWS::EC2::SecurityGroupIngress
@@ -110,13 +110,13 @@ Resources:
       Name: HZ-SERVER-TG
       HealthCheckIntervalSeconds: 150
       HealthCheckPath: /actuator/health
-      HealthCheckPort: 8001
+      HealthCheckPort: 8081
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 120
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 2
       TargetType: ip
-      Port: 8000
+      Port: 8080
       Protocol: HTTP
       VpcId: !Ref VpcId
   HzServerLoadBalancerRule:
@@ -129,21 +129,21 @@ Resources:
       - Field: path-pattern
         Values: ['*']
       ListenerArn: !Ref AppLoadBalancerListener
-      Priority: 2
-  # When HZ server container comes up, it will register in this target group
+      Priority: 3
+  # When HZ client container comes up, it will register in this target group
   HzClientTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
       Name: HZ-CLIENT-TG
       HealthCheckIntervalSeconds: 150
       HealthCheckPath: /actuator/health
-      HealthCheckPort: 8001
+      HealthCheckPort: 8081
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 120
       HealthyThresholdCount: 2
       UnhealthyThresholdCount: 2
       TargetType: ip
-      Port: 8000
+      Port: 8080
       Protocol: HTTP
       VpcId: !Ref VpcId
   HzClientLoadBalancerRule:
@@ -157,6 +157,33 @@ Resources:
           Values: ['/api/v1/hz/client/**']
       ListenerArn: !Ref AppLoadBalancerListener
       Priority: 1
+  # When HZ management center container comes up, it will register in this target group
+  HzMgmtTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: HZ-MGMT-TG
+      HealthCheckIntervalSeconds: 150
+      HealthCheckPath: /hazelcast-mancenter/health
+      HealthCheckPort: 8081
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 120
+      HealthyThresholdCount: 2
+      UnhealthyThresholdCount: 2
+      TargetType: ip
+      Port: 8080
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+  HzMgmtLoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref 'HzMgmtTargetGroup'
+          Type: 'forward'
+      Conditions:
+        - Field: path-pattern
+          Values: ['/hazelcast-mancenter/**']
+      ListenerArn: !Ref AppLoadBalancerListener
+      Priority: 2
 
   # This is a role which is used by the ECS tasks themselves.
   ECSTaskExecutionRole:
@@ -225,6 +252,83 @@ Resources:
 
   # Service discovery for message service, DnsConfig property specifies the DNS records that are automatically created
   # in Amazon Route 53 when your Amazon ECS task is registered with the service discovery service
+  HzMgmtDiscoveryService:
+    Type: AWS::ServiceDiscovery::Service
+    Properties:
+      Description: Discovery Service for the HZ management center service
+      Name: hz-mgmt-service
+      NamespaceId: !Ref HzPrivateNamespace
+      DnsConfig:
+        RoutingPolicy: MULTIVALUE
+        DnsRecords:
+          - TTL: 60
+            Type: A
+      HealthCheckCustomConfig:
+        FailureThreshold: 1
+  # Cloud watch log group to which HZ server container send logs
+  HzMgmtLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub '/ECS/hz-mgmt'
+      RetentionInDays: 7
+  # Metadata description of what message container to run and what resource requirements it has
+  HzMgmtTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: HZ-MGMT-TD
+      Cpu: 512
+      Memory: 1024
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !Ref ECSTaskExecutionRole
+      TaskRoleArn: !Ref ECSTaskRole
+      ContainerDefinitions:
+        - Name: HZ-MGMT-CONTAINER
+          Cpu: 512
+          Memory: 1024
+          Image: 'hazelcast/management-center:3.12.6'
+          PortMappings:
+            - ContainerPort: 8080
+            - ContainerPort: 8081
+          Environment:
+            - Name: JAVA_OPTS
+              Value: -Dhazelcast.mc.healthCheck.enable=true
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref HzMgmtLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+  # Service is a resource which allows to run multiple copies of a type of task, and gather up their logs and metrics,
+  # as well as monitor the number of running tasks and replace any that have crashed
+  HzMgmtECSService:
+    Type: AWS::ECS::Service
+    DependsOn: HzMgmtLoadBalancerRule
+    Properties:
+      ServiceName: HZ-MGMT-SERVICE
+      Cluster: !Ref ECSCluster
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: 2
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !Ref ContainerSecurityGroup
+          Subnets: !Ref PrivateSubnetList
+      TaskDefinition: !Ref HzMgmtTaskDefinition
+      LoadBalancers:
+        - ContainerName: HZ-MGMT-CONTAINER
+          ContainerPort: 8080
+          TargetGroupArn: !Ref HzMgmtTargetGroup
+      ServiceRegistries:
+        - RegistryArn: !GetAtt HzMgmtDiscoveryService.Arn
+
+  # Service discovery for message service, DnsConfig property specifies the DNS records that are automatically created
+  # in Amazon Route 53 when your Amazon ECS task is registered with the service discovery service
   HzServerDiscoveryService:
     Type: AWS::ServiceDiscovery::Service
     Properties:
@@ -262,8 +366,8 @@ Resources:
         Memory: 1024
         Image: 'asakchris/aws-hazelcast-hazelcast-server:1.0-SNAPSHOT'
         PortMappings:
-          - ContainerPort: 8000
-          - ContainerPort: 8001
+          - ContainerPort: 8080
+          - ContainerPort: 8081
           - ContainerPort: 5701
         Environment:
           - Name: JAVA_OPTS
@@ -296,7 +400,7 @@ Resources:
       TaskDefinition: !Ref HzServerTaskDefinition
       LoadBalancers:
       - ContainerName: HZ-SERVER-CONTAINER
-        ContainerPort: 8000
+        ContainerPort: 8080
         TargetGroupArn: !Ref HzServerTargetGroup
       ServiceRegistries:
         - RegistryArn: !GetAtt HzServerDiscoveryService.Arn
@@ -325,8 +429,8 @@ Resources:
           Memory: 1024
           Image: 'asakchris/aws-hazelcast-hazelcast-client:1.0-SNAPSHOT'
           PortMappings:
-            - ContainerPort: 8000
-            - ContainerPort: 8001
+            - ContainerPort: 8080
+            - ContainerPort: 8081
           Environment:
             - Name: JAVA_OPTS
               Value: -Dspring.hazelcast.config=classpath:hazelcast-client-aws.xml
@@ -360,5 +464,5 @@ Resources:
       TaskDefinition: !Ref HzClientTaskDefinition
       LoadBalancers:
         - ContainerName: HZ-CLIENT-CONTAINER
-          ContainerPort: 8000
+          ContainerPort: 8080
           TargetGroupArn: !Ref HzClientTargetGroup
