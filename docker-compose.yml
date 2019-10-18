@@ -3,7 +3,7 @@ services:
   hzServer:
     image: asakchris/aws-hazelcast-hazelcast-server:1.0-SNAPSHOT
     environment:
-      - JAVA_OPTS: "-Dspring.hazelcast.config=classpath:hazelcast-aws.xml"
+      - JAVA_OPTS=-Dspring.hazelcast.config=classpath:hazelcast-aws.xml
     ports:
       - "8000:8000"
       - "8001:8001"
