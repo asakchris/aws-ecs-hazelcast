@@ -9,7 +9,7 @@
 
     <network>
         <cluster-members>
-            <address>127.0.0.1</address>
+            <address>${hz.server.address}</address>
         </cluster-members>
     </network>
 </hazelcast-client>
