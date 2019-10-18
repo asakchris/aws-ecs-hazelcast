@@ -15,7 +15,7 @@ Resources:
   LoadBalancerSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: LOAD-BALANCER-SG
+      GroupName: HZ-LOAD-BALANCER-SG
       GroupDescription: Access to the public facing load balancer
       VpcId: !Ref VpcId
       SecurityGroupIngress:
@@ -71,7 +71,7 @@ Resources:
   AppLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: APP-ALB
+      Name: HZ-APP-ALB
       Scheme: internet-facing
       LoadBalancerAttributes:
       - Key: idle_timeout.timeout_seconds
@@ -267,11 +267,10 @@ Resources:
           SecurityGroups:
           - !Ref ContainerSecurityGroup
           Subnets: !Ref PrivateSubnetList
-      TaskDefinition: !Ref MessageTaskDefinition
+      TaskDefinition: !Ref HzServerTaskDefinition
       LoadBalancers:
       - ContainerName: HZ-SERVER-CONTAINER
         ContainerPort: 8000
         TargetGroupArn: !Ref HzServerTargetGroup
       ServiceRegistries:
-      - RegistryArn: !GetAtt HzServerDiscoveryService.Arn
-        ContainerPort: 5701
+        - RegistryArn: !GetAtt HzServerDiscoveryService.Arn
