@@ -1,0 +1,21 @@
+<hazelcast-client xmlns="http://www.hazelcast.com/schema/client-config"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  xsi:schemaLocation="http://www.hazelcast.com/schema/client-config
+                  http://www.hazelcast.com/schema/client-config/hazelcast-client-config-3.11.xsd">
+    <group>
+        <name>dev</name>
+        <password>dev-pass</password>
+    </group>
+
+    <network>
+        <discovery-strategies>
+            <discovery-strategy enabled="true"
+                                class="com.example.hazelcast.service.discovery.DnsServiceDiscoveryStrategy">
+                <properties>
+                    <property name="hostname">hz-server-service.hz-discovery</property>
+                    <property name="port">5701</property>
+                </properties>
+            </discovery-strategy>
+        </discovery-strategies>
+    </network>
+</hazelcast-client>

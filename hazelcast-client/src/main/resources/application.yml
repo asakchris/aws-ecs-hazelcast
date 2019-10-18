@@ -1,7 +1,7 @@
 server:
   port: 8000
   servlet:
-    context-path: /api/v1/hz/server
+    context-path: /api/v1/hz/client
 
 management:
   server:
@@ -13,4 +13,4 @@ management:
 
 spring:
   application:
-    name: Hazecast-Server
+    name: Hazecast-Client
