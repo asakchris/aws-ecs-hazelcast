@@ -12,7 +12,7 @@ services:
       - hzMgmt
     image: asakchris/aws-hazelcast-hazelcast-server:1.0-SNAPSHOT
     environment:
-      - JAVA_OPTS=-Dspring.hazelcast.config=classpath:hazelcast-local.xml -Dhz.mgmt.host=hzMgmt
+      - JAVA_OPTS=-Dspring.profiles.active=dc -Dhz.mgmt.host=hzMgmt
     ports:
       - "8000:8080"
       - "8001:8081"
@@ -22,7 +22,7 @@ services:
       - hzServer
     image: asakchris/aws-hazelcast-hazelcast-client:1.0-SNAPSHOT
     environment:
-      - JAVA_OPTS=-Dspring.hazelcast.config=classpath:hazelcast-client-local.xml -Dhz.server.address=hzServer
+      - JAVA_OPTS=-Dspring.profiles.active=dc -Dhz.server.address=hzServer
     ports:
       - "8002:8080"
       - "8003:8081"

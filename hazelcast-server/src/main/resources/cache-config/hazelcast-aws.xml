@@ -2,8 +2,8 @@
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xsi:schemaLocation="http://www.hazelcast.com/schema/config
            http://www.hazelcast.com/schema/config/hazelcast-config-3.11.xsd">
-    <import resource="classpath:hazelcast-common.xml"/>
-    <import resource="classpath:cache-config/hazelcast-local.xml"/>
+    <import resource="classpath:cache-config/hazelcast-common.xml"/>
+    <import resource="classpath:cache-config/hazelcast-map.xml"/>
 
     <instance-name>hzInstance1</instance-name>
 

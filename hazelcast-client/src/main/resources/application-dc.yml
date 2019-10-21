@@ -1,0 +1,6 @@
+spring:
+  hazelcast:
+    config: 'classpath:cache-config/hazelcast-client-local.xml'
+hz:
+  server:
+    address: hzServer

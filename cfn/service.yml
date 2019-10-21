@@ -312,7 +312,7 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 75
-      DesiredCount: 2
+      DesiredCount: 1
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
@@ -382,7 +382,9 @@ Resources:
   # as well as monitor the number of running tasks and replace any that have crashed
   HzServerECSService:
     Type: AWS::ECS::Service
-    DependsOn: HzServerLoadBalancerRule
+    DependsOn:
+      - HzServerLoadBalancerRule
+      - HzMgmtECSService
     Properties:
       ServiceName: HZ-SERVER-SERVICE
       Cluster: !Ref ECSCluster
@@ -433,7 +435,7 @@ Resources:
             - ContainerPort: 8081
           Environment:
             - Name: JAVA_OPTS
-              Value: -Dspring.hazelcast.config=classpath:hazelcast-client-aws.xml
+              Value: -Dspring.profiles.active=dc
           LogConfiguration:
             LogDriver: awslogs
             Options:

@@ -7,6 +7,10 @@
         <password>dev-pass</password>
     </group>
 
+    <properties>
+        <property name="hazelcast.discovery.enabled">true</property>
+    </properties>
+
     <network>
         <discovery-strategies>
             <discovery-strategy enabled="true"

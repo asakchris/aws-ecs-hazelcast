@@ -1,0 +1,8 @@
+server:
+  port: 8002
+management:
+  server:
+    port: 8003
+spring:
+  hazelcast:
+    config: 'classpath:cache-config/hazelcast-client-local.xml'
