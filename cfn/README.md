@@ -12,3 +12,26 @@ aws cloudformation deploy --template-file service.yml --stack-name HZ-SERVICE
     PublicSubnetList="subnet-************, subnet-***********" 
     PrivateSubnetList="subnet-***********, subnet-***********"
 ```
+
+### Test
+###### Hazelcast Management Center
+```
+http://HZ-APP-ALB-*******.us-east-1.elb.amazonaws.com/hazelcast-mancenter/
+```
+###### Hazelcast Client
+Health Check
+Save Token
+```
+curl -X POST \
+  http://HZ-APP-ALB-*******.us-east-1.elb.amazonaws.com/api/v1/hz/client/tokens \
+  -H 'Content-Type: application/json' \
+  -d '{
+	"username": "Foo Bar",
+	"token": "a129837-xcv2422-fdd943875"
+}'
+```
+Get Token
+```
+curl -X GET \
+  'http://HZ-APP-ALB-*******.us-east-1.elb.amazonaws.com/api/v1/hz/client/tokens?username=Foo%20Bar'
+```
