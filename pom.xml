@@ -69,7 +69,7 @@
                     <artifactId>dockerfile-maven-plugin</artifactId>
                     <version>1.4.10</version>
                     <configuration>
-                        <repository>asakchris/aws-hazelcast-${project.artifactId}</repository>
+                        <repository>699183880494.dkr.ecr.us-east-1.amazonaws.com/web/test/${project.artifactId}</repository>
                         <tag>${project.version}</tag>
                         <googleContainerRegistryEnabled>false</googleContainerRegistryEnabled>
                         <skip>true</skip>
