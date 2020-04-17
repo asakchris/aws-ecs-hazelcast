@@ -1,15 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: This stack creates ECS cluster with hazelcast server
 Parameters:
-  VpcId:
-    Type: AWS::EC2::VPC::Id
-    Description: The VPC in which Fargate container tasks run
-  PublicSubnetList:
-    Type: List<AWS::EC2::Subnet::Id>
-    Description: Select at least two public subnets in given VPC to deploy ALB
-  PrivateSubnetList:
-    Type: List<AWS::EC2::Subnet::Id>
-    Description: Select at least two private subnets in given VPC where Fargate run tasks
+  Environment:
+    Type: String
+    Description: Environment Name (DEV)
+    AllowedValues: ['DEV']
+  Platform:
+    Type: String
+    Default: 'HAZELCAST'
+    Description: Platform Name
+  VpcStackName:
+    Type: String
+    Description: Name of the stack which is used to create VPC and Subnets
 Resources:
   # Load balancer security group
   LoadBalancerSG:
@@ -17,7 +19,8 @@ Resources:
     Properties:
       GroupName: HZ-LOAD-BALANCER-SG
       GroupDescription: Access to the public facing load balancer
-      VpcId: !Ref VpcId
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
       SecurityGroupIngress:
         # Allow access to ALB from anywhere on the internet
         - IpProtocol: tcp
@@ -36,7 +39,8 @@ Resources:
     Properties:
       GroupName: HZ-CONTAINER-SG
       GroupDescription: Access to the HZ container
-      VpcId: !Ref VpcId
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
   # Allow traffic from load balancer into container
   ContainerSecurityGroupIngressFromALB:
     Type: AWS::EC2::SecurityGroupIngress
@@ -76,7 +80,9 @@ Resources:
       LoadBalancerAttributes:
       - Key: idle_timeout.timeout_seconds
         Value: '60'
-      Subnets: !Ref PublicSubnetList
+      Subnets:
+        - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PublicSubnetOne']]
+        - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PublicSubnetTwo']]
       SecurityGroups: [!Ref 'LoadBalancerSG']
   # This target group is used to setup the ALB to just drop traffic initially, before any real service target groups have been added
   AppLoadBalancerDummyTG:
@@ -91,7 +97,8 @@ Resources:
       Port: 80
       Protocol: HTTP
       UnhealthyThresholdCount: 2
-      VpcId: !Ref VpcId
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
   AppLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
@@ -118,7 +125,8 @@ Resources:
       TargetType: ip
       Port: 8080
       Protocol: HTTP
-      VpcId: !Ref VpcId
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
   HzServerLoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -145,7 +153,8 @@ Resources:
       TargetType: ip
       Port: 8080
       Protocol: HTTP
-      VpcId: !Ref VpcId
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
   HzClientLoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -172,7 +181,8 @@ Resources:
       TargetType: ip
       Port: 8080
       Protocol: HTTP
-      VpcId: !Ref VpcId
+      VpcId:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
   HzMgmtLoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -248,7 +258,8 @@ Resources:
     Type: AWS::ServiceDiscovery::PrivateDnsNamespace
     Properties:
       Name: hz-discovery
-      Vpc: !Ref VpcId
+      Vpc:
+        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
 
   # Service discovery for message service, DnsConfig property specifies the DNS records that are automatically created
   # in Amazon Route 53 when your Amazon ECS task is registered with the service discovery service
@@ -318,7 +329,9 @@ Resources:
           AssignPublicIp: DISABLED
           SecurityGroups:
             - !Ref ContainerSecurityGroup
-          Subnets: !Ref PrivateSubnetList
+          Subnets:
+            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetOne']]
+            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetTwo']]
       TaskDefinition: !Ref HzMgmtTaskDefinition
       LoadBalancers:
         - ContainerName: HZ-MGMT-CONTAINER
@@ -398,7 +411,9 @@ Resources:
           AssignPublicIp: DISABLED
           SecurityGroups:
           - !Ref ContainerSecurityGroup
-          Subnets: !Ref PrivateSubnetList
+          Subnets:
+            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetOne']]
+            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetTwo']]
       TaskDefinition: !Ref HzServerTaskDefinition
       LoadBalancers:
       - ContainerName: HZ-SERVER-CONTAINER
@@ -462,7 +477,9 @@ Resources:
           AssignPublicIp: DISABLED
           SecurityGroups:
             - !Ref ContainerSecurityGroup
-          Subnets: !Ref PrivateSubnetList
+          Subnets:
+            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetOne']]
+            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetTwo']]
       TaskDefinition: !Ref HzClientTaskDefinition
       LoadBalancers:
         - ContainerName: HZ-CLIENT-CONTAINER

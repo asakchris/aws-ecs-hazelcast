@@ -1,0 +1,25 @@
+{
+  "stacks": [
+    {
+      "groupName": "vpc",
+      "groupStacks": [
+        {
+          "stackName": "${app_environment}-${app_name}-VPC",
+          "templateFile": "${cfn_dir}/vpc.yml",
+          "paramFile": "${cfn_dir}/env/${app_environment}/Vpc.json",
+          "canBeDeleted": "No"
+        }
+      ]
+    },
+    {
+      "groupName": "service",
+      "groupStacks": [
+        {
+          "stackName": "${app_environment}-${app_name}-SERVICE",
+          "templateFile": "${cfn_dir}/service.yml",
+          "paramFile": "${cfn_dir}/env/${app_environment}/Service.json"
+        }
+      ]
+    }
+  ]
+}
