@@ -60,3 +60,7 @@ Get Token
 curl -X GET \
   'http://localhost:8002/api/v1/hz/client/tokens?username=Foo%20Bar'
 ```
+###### Hazelcast Management Center Console
+```
+http://localhost:8080/hazelcast-mancenter/login.html
+```
