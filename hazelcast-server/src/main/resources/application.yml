@@ -1,7 +1,5 @@
 server:
   port: 8080
-  servlet:
-    context-path: /api/v1/hz/server
 
 management:
   server:
@@ -9,7 +7,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: '*'
+  endpoint:
+    health:
+      show-details: ALWAYS
 
 spring:
   application:

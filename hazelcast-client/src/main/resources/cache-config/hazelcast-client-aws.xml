@@ -1,25 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <hazelcast-client xmlns="http://www.hazelcast.com/schema/client-config"
                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                   xsi:schemaLocation="http://www.hazelcast.com/schema/client-config
-                  http://www.hazelcast.com/schema/client-config/hazelcast-client-config-3.11.xsd">
-    <group>
-        <name>dev</name>
-        <password>dev-pass</password>
-    </group>
+                  http://www.hazelcast.com/schema/client-config/hazelcast-client-config-4.0.xsd">
+    <cluster-name>aws-hz-cluster</cluster-name>
+    <instance-name>client-aws</instance-name>
 
-    <properties>
+    <!--<properties>
         <property name="hazelcast.discovery.enabled">true</property>
-    </properties>
+    </properties>-->
 
     <network>
-        <discovery-strategies>
-            <discovery-strategy enabled="true"
-                                class="com.example.hazelcast.service.discovery.DnsServiceDiscoveryStrategy">
-                <properties>
-                    <property name="hostname">hz-server-service.hz-discovery</property>
-                    <property name="port">5701</property>
-                </properties>
-            </discovery-strategy>
-        </discovery-strategies>
+        <aws enabled="true">
+            <hz-port>5701-5702</hz-port>
+            <cluster>HZ-DISCOVERY-ECS-CLUSTER</cluster>
+            <service-name>HZ-SERVER-SERVICE</service-name>
+        </aws>
     </network>
+
+    <connection-strategy async-start="true" reconnect-mode="ASYNC">
+        <connection-retry>
+            <initial-backoff-millis>2000</initial-backoff-millis>
+            <max-backoff-millis>60000</max-backoff-millis>
+            <multiplier>3</multiplier>
+            <cluster-connect-timeout-millis>5000</cluster-connect-timeout-millis>
+            <jitter>0.5</jitter>
+        </connection-retry>
+    </connection-strategy>
 </hazelcast-client>

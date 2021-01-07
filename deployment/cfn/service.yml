@@ -4,7 +4,7 @@ Parameters:
   Environment:
     Type: String
     Description: Environment Name (DEV)
-    AllowedValues: ['DEV']
+    AllowedValues: [ 'DEV' ]
   Platform:
     Type: String
     Default: 'HAZELCAST'
@@ -20,7 +20,7 @@ Resources:
       GroupName: HZ-LOAD-BALANCER-SG
       GroupDescription: Access to the public facing load balancer
       VpcId:
-        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+        Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
       SecurityGroupIngress:
         # Allow access to ALB from anywhere on the internet
         - IpProtocol: tcp
@@ -40,7 +40,7 @@ Resources:
       GroupName: HZ-CONTAINER-SG
       GroupDescription: Access to the HZ container
       VpcId:
-        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+        Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
   # Allow traffic from load balancer into container
   ContainerSecurityGroupIngressFromALB:
     Type: AWS::EC2::SecurityGroupIngress
@@ -78,12 +78,12 @@ Resources:
       Name: HZ-APP-ALB
       Scheme: internet-facing
       LoadBalancerAttributes:
-      - Key: idle_timeout.timeout_seconds
-        Value: '60'
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
       Subnets:
-        - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PublicSubnetOne']]
-        - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PublicSubnetTwo']]
-      SecurityGroups: [!Ref 'LoadBalancerSG']
+        - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PublicSubnetOne' ] ]
+        - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PublicSubnetTwo' ] ]
+      SecurityGroups: [ !Ref 'LoadBalancerSG' ]
   # This target group is used to setup the ALB to just drop traffic initially, before any real service target groups have been added
   AppLoadBalancerDummyTG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -98,15 +98,15 @@ Resources:
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId:
-        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+        Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
   AppLoadBalancerListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     DependsOn:
-    - AppLoadBalancer
+      - AppLoadBalancer
     Properties:
       DefaultActions:
-      - TargetGroupArn: !Ref 'AppLoadBalancerDummyTG'
-        Type: 'forward'
+        - TargetGroupArn: !Ref 'AppLoadBalancerDummyTG'
+          Type: 'forward'
       LoadBalancerArn: !Ref 'AppLoadBalancer'
       Port: 80
       Protocol: HTTP
@@ -126,16 +126,16 @@ Resources:
       Port: 8080
       Protocol: HTTP
       VpcId:
-        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+        Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
   HzServerLoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
-      - TargetGroupArn: !Ref 'HzServerTargetGroup'
-        Type: 'forward'
+        - TargetGroupArn: !Ref 'HzServerTargetGroup'
+          Type: 'forward'
       Conditions:
-      - Field: path-pattern
-        Values: ['*']
+        - Field: path-pattern
+          Values: [ '*' ]
       ListenerArn: !Ref AppLoadBalancerListener
       Priority: 3
   # When HZ client container comes up, it will register in this target group
@@ -154,7 +154,7 @@ Resources:
       Port: 8080
       Protocol: HTTP
       VpcId:
-        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+        Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
   HzClientLoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -163,7 +163,7 @@ Resources:
           Type: 'forward'
       Conditions:
         - Field: path-pattern
-          Values: ['/api/v1/hz/client/**']
+          Values: [ '/api/v1/hz/client/**' ]
       ListenerArn: !Ref AppLoadBalancerListener
       Priority: 1
   # When HZ management center container comes up, it will register in this target group
@@ -182,7 +182,7 @@ Resources:
       Port: 8080
       Protocol: HTTP
       VpcId:
-        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+        Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
   HzMgmtLoadBalancerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
@@ -191,7 +191,7 @@ Resources:
           Type: 'forward'
       Conditions:
         - Field: path-pattern
-          Values: ['/hazelcast-mancenter/**']
+          Values: [ '/hazelcast-mancenter/**' ]
       ListenerArn: !Ref AppLoadBalancerListener
       Priority: 2
 
@@ -202,27 +202,13 @@ Resources:
       RoleName: HZ-ECS-TASK-EXEC-ROLE
       AssumeRolePolicyDocument:
         Statement:
-        - Effect: Allow
-          Principal:
-            Service: [ecs-tasks.amazonaws.com]
-          Action: ['sts:AssumeRole']
-      Path: /
-      Policies:
-      - PolicyName: ECSTaskExecutionRolePolicy
-        PolicyDocument:
-          Statement:
           - Effect: Allow
-            Action:
-              # Allow the ECS Tasks to download images from ECR
-              - 'ecr:GetAuthorizationToken'
-              - 'ecr:BatchCheckLayerAvailability'
-              - 'ecr:GetDownloadUrlForLayer'
-              - 'ecr:BatchGetImage'
-
-              # Allow the ECS tasks to upload logs to CloudWatch
-              - 'logs:CreateLogStream'
-              - 'logs:PutLogEvents'
-            Resource: '*'
+            Principal:
+              Service: [ ecs-tasks.amazonaws.com ]
+            Action: [ 'sts:AssumeRole' ]
+      Path: /
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
 
   # IAM role to give the service's containers if the code within needs to access other AWS resources
   # like ECS tasks, S3 buckets etc
@@ -232,20 +218,20 @@ Resources:
       RoleName: HZ-ECS-TASK-ROLE
       AssumeRolePolicyDocument:
         Statement:
-        - Effect: 'Allow'
-          Principal:
-            Service: [ecs-tasks.amazonaws.com]
-          Action: ['sts:AssumeRole']
+          - Effect: 'Allow'
+            Principal:
+              Service: [ ecs-tasks.amazonaws.com ]
+            Action: [ 'sts:AssumeRole' ]
       Policies:
-      - PolicyName: ECSServiceDiscovery
-        PolicyDocument:
-          Statement:
-          - Effect: Allow
-            Action:
-              # Allow ECS container to access ECS tasks
-              - 'ecs:ListTasks'
-              - 'ecs:DescribeTasks'
-            Resource: '*'
+        - PolicyName: ECSServiceDiscovery
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  # Allow ECS container to access ECS tasks
+                  - 'ecs:ListTasks'
+                  - 'ecs:DescribeTasks'
+                Resource: '*'
 
   # HZ Discovery POC ECS Cluster
   ECSCluster:
@@ -259,7 +245,7 @@ Resources:
     Properties:
       Name: hz-discovery
       Vpc:
-        Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'VPCId']]
+        Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
 
   # Service discovery for message service, DnsConfig property specifies the DNS records that are automatically created
   # in Amazon Route 53 when your Amazon ECS task is registered with the service discovery service
@@ -298,11 +284,13 @@ Resources:
         - Name: HZ-MGMT-CONTAINER
           Cpu: 512
           Memory: 1024
-          Image: 'hazelcast/management-center:3.12.6'
+          Image: 'hazelcast/management-center:4.2020.12'
           PortMappings:
             - ContainerPort: 8080
             - ContainerPort: 8081
           Environment:
+            - Name: MC_CONTEXT_PATH
+              Value: /hazelcast-mancenter
             - Name: JAVA_OPTS
               Value: -Dhazelcast.mc.healthCheck.enable=true
           LogConfiguration:
@@ -330,8 +318,8 @@ Resources:
           SecurityGroups:
             - !Ref ContainerSecurityGroup
           Subnets:
-            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetOne']]
-            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetTwo']]
+            - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PrivateSubnetOne' ] ]
+            - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PrivateSubnetTwo' ] ]
       TaskDefinition: !Ref HzMgmtTaskDefinition
       LoadBalancers:
         - ContainerName: HZ-MGMT-CONTAINER
@@ -340,21 +328,6 @@ Resources:
       ServiceRegistries:
         - RegistryArn: !GetAtt HzMgmtDiscoveryService.Arn
 
-  # Service discovery for message service, DnsConfig property specifies the DNS records that are automatically created
-  # in Amazon Route 53 when your Amazon ECS task is registered with the service discovery service
-  HzServerDiscoveryService:
-    Type: AWS::ServiceDiscovery::Service
-    Properties:
-      Description: Discovery Service for the HZ server service
-      Name: hz-server-service
-      NamespaceId: !Ref HzPrivateNamespace
-      DnsConfig:
-        RoutingPolicy: MULTIVALUE
-        DnsRecords:
-          - TTL: 60
-            Type: A
-      HealthCheckCustomConfig:
-        FailureThreshold: 1
   # Cloud watch log group to which HZ server container send logs
   HzServerLogGroup:
     Type: AWS::Logs::LogGroup
@@ -370,27 +343,27 @@ Resources:
       Memory: 1024
       NetworkMode: awsvpc
       RequiresCompatibilities:
-      - FARGATE
+        - FARGATE
       ExecutionRoleArn: !Ref ECSTaskExecutionRole
       TaskRoleArn: !Ref ECSTaskRole
       ContainerDefinitions:
-      - Name: HZ-SERVER-CONTAINER
-        Cpu: 512
-        Memory: 1024
-        Image: 'asakchris/aws-hazelcast-hazelcast-server:1.0-SNAPSHOT'
-        PortMappings:
-          - ContainerPort: 8080
-          - ContainerPort: 8081
-          - ContainerPort: 5701
-        Environment:
-          - Name: JAVA_OPTS
-            Value: -Dspring.profiles.active=aws
-        LogConfiguration:
-          LogDriver: awslogs
-          Options:
-            awslogs-group: !Ref HzServerLogGroup
-            awslogs-region: !Ref AWS::Region
-            awslogs-stream-prefix: ecs
+        - Name: HZ-SERVER-CONTAINER
+          Cpu: 512
+          Memory: 1024
+          Image: 'asakchris/aws-hazelcast-hazelcast-server:4.0'
+          PortMappings:
+            - ContainerPort: 8080
+            - ContainerPort: 8081
+            - ContainerPort: 5701
+          Environment:
+            - Name: JAVA_OPTS
+              Value: -Dspring.profiles.active=aws
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref HzServerLogGroup
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
   # Service is a resource which allows to run multiple copies of a type of task, and gather up their logs and metrics,
   # as well as monitor the number of running tasks and replace any that have crashed
   HzServerECSService:
@@ -410,17 +383,15 @@ Resources:
         AwsvpcConfiguration:
           AssignPublicIp: DISABLED
           SecurityGroups:
-          - !Ref ContainerSecurityGroup
+            - !Ref ContainerSecurityGroup
           Subnets:
-            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetOne']]
-            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetTwo']]
+            - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PrivateSubnetOne' ] ]
+            - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PrivateSubnetTwo' ] ]
       TaskDefinition: !Ref HzServerTaskDefinition
       LoadBalancers:
-      - ContainerName: HZ-SERVER-CONTAINER
-        ContainerPort: 8080
-        TargetGroupArn: !Ref HzServerTargetGroup
-      ServiceRegistries:
-        - RegistryArn: !GetAtt HzServerDiscoveryService.Arn
+        - ContainerName: HZ-SERVER-CONTAINER
+          ContainerPort: 8080
+          TargetGroupArn: !Ref HzServerTargetGroup
 
   # Cloud watch log group to which HZ client container send logs
   HzClientLogGroup:
@@ -444,13 +415,13 @@ Resources:
         - Name: HZ-CLIENT-CONTAINER
           Cpu: 512
           Memory: 1024
-          Image: 'asakchris/aws-hazelcast-hazelcast-client:1.0-SNAPSHOT'
+          Image: 'asakchris/aws-hazelcast-hazelcast-client:4.0'
           PortMappings:
             - ContainerPort: 8080
             - ContainerPort: 8081
           Environment:
             - Name: JAVA_OPTS
-              Value: -Dspring.profiles.active=aws
+              Value: -Dspring.profiles.active=aws -Dlogging.level.com.hazelcast=DEBUG
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -478,8 +449,8 @@ Resources:
           SecurityGroups:
             - !Ref ContainerSecurityGroup
           Subnets:
-            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetOne']]
-            - Fn::ImportValue: !Join [':', [!Ref 'VpcStackName', 'PrivateSubnetTwo']]
+            - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PrivateSubnetOne' ] ]
+            - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PrivateSubnetTwo' ] ]
       TaskDefinition: !Ref HzClientTaskDefinition
       LoadBalancers:
         - ContainerName: HZ-CLIENT-CONTAINER

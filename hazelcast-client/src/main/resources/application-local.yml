@@ -1,8 +1,8 @@
 server:
-  port: 8002
+  port: 8010
 management:
   server:
-    port: 8003
+    port: 8011
 spring:
   hazelcast:
     config: 'classpath:cache-config/hazelcast-client-local.xml'

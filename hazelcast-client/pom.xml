@@ -5,18 +5,13 @@
     <parent>
         <artifactId>aws-ecs-hazelcast</artifactId>
         <groupId>com.example</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
     <artifactId>hazelcast-client</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>com.example</groupId>
-            <artifactId>hazelcast-common</artifactId>
-            <version>${project.parent.version}</version>
-        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -35,7 +30,7 @@
         </dependency>
         <dependency>
             <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-client</artifactId>
+            <artifactId>hazelcast-aws</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

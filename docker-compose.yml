@@ -1,16 +1,17 @@
 version: '3'
 services:
   hzMgmt:
-    image: hazelcast/management-center:3.12.6
+    image: hazelcast/management-center:4.2020.12
     environment:
       - JAVA_OPTS=-Dhazelcast.mc.healthCheck.enable=true
+      - MC_CONTEXT_PATH=/hazelcast-mancenter
     ports:
       - "8080:8080"
       - "8081:8081"
   hzServer:
     depends_on:
       - hzMgmt
-    image: asakchris/aws-hazelcast-hazelcast-server:1.0-SNAPSHOT
+    image: asakchris/aws-hazelcast-hazelcast-server:4.0
     environment:
       - JAVA_OPTS=-Dspring.profiles.active=dc -Dhz.mgmt.host=hzMgmt
     ports:
@@ -20,7 +21,7 @@ services:
   hzClient:
     depends_on:
       - hzServer
-    image: asakchris/aws-hazelcast-hazelcast-client:1.0-SNAPSHOT
+    image: asakchris/aws-hazelcast-hazelcast-client:4.0
     environment:
       - JAVA_OPTS=-Dspring.profiles.active=dc -Dhz.server.address=hzServer
     ports:
