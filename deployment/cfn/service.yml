@@ -84,7 +84,7 @@ Resources:
         - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PublicSubnetOne' ] ]
         - Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'PublicSubnetTwo' ] ]
       SecurityGroups: [ !Ref 'LoadBalancerSG' ]
-  # This target group is used to setup the ALB to just drop traffic initially, before any real service target groups have been added
+  # This target group is used to set up the ALB to just drop traffic initially, before any real service target groups have been added
   AppLoadBalancerDummyTG:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
@@ -299,7 +299,7 @@ Resources:
               awslogs-group: !Ref HzMgmtLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: ecs
-  # Service is a resource which allows to run multiple copies of a type of task, and gather up their logs and metrics,
+  # Service is a resource which allows running multiple copies of a type of task, and gather their logs and metrics,
   # as well as monitor the number of running tasks and replace any that have crashed
   HzMgmtECSService:
     Type: AWS::ECS::Service
@@ -364,7 +364,7 @@ Resources:
               awslogs-group: !Ref HzServerLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: ecs
-  # Service is a resource which allows to run multiple copies of a type of task, and gather up their logs and metrics,
+  # Service is a resource which allows running multiple copies of a type of task, and gather their logs and metrics,
   # as well as monitor the number of running tasks and replace any that have crashed
   HzServerECSService:
     Type: AWS::ECS::Service
@@ -428,7 +428,7 @@ Resources:
               awslogs-group: !Ref HzClientLogGroup
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: ecs
-  # Service is a resource which allows to run multiple copies of a type of task, and gather up their logs and metrics,
+  # Service is a resource which allows running multiple copies of a type of task, and gather their logs and metrics,
   # as well as monitor the number of running tasks and replace any that have crashed
   HzClientECSService:
     Type: AWS::ECS::Service

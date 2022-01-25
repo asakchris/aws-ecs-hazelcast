@@ -1,36 +1,38 @@
 <hazelcast xmlns="http://www.hazelcast.com/schema/config"
-           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xsi:schemaLocation="http://www.hazelcast.com/schema/config
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.hazelcast.com/schema/config
            http://www.hazelcast.com/schema/config/hazelcast-config-4.0.xsd">
-    <import resource="classpath:cache-config/hazelcast-common.xml"/>
-    <import resource="classpath:cache-config/hazelcast-map.xml"/>
+  <import resource="classpath:cache-config/hazelcast-common.xml"/>
+  <import resource="classpath:cache-config/hazelcast-map.xml"/>
 
-    <cluster-name>aws-hz-cluster</cluster-name>
-    
-    <properties>
-        <property name="hazelcast.discovery.enabled">true</property>
-    </properties>
+  <cluster-name>aws-hz-cluster</cluster-name>
 
-    <network>
-        <!--<port>5701</port>-->
-        <interfaces enabled="true">
-            <interface>10.0.*.*</interface>
-        </interfaces>
-        <join>
-            <multicast enabled="false"/>
-            <aws enabled="true">
-                <hz-port>5701</hz-port>
-                <cluster>HZ-DISCOVERY-ECS-CLUSTER</cluster>
-                <service-name>HZ-SERVER-SERVICE</service-name>
-            </aws>
-        </join>
-    </network>
+  <properties>
+    <property name="hazelcast.discovery.enabled">true</property>
+  </properties>
 
-    <metrics enabled="true">
-        <management-center enabled="true">
-            <retention-seconds>5</retention-seconds>
-        </management-center>
-        <jmx enabled="false"/>
-    </metrics>
-    <management-center scripting-enabled="true">http://hz-mgmt-service.hz-discovery:8080/hazelcast-mancenter</management-center>
+  <network>
+    <!--<port>5701</port>-->
+    <interfaces enabled="true">
+      <interface>10.0.*.*</interface>
+    </interfaces>
+    <join>
+      <multicast enabled="false"/>
+      <aws enabled="true">
+        <hz-port>5701</hz-port>
+        <cluster>HZ-DISCOVERY-ECS-CLUSTER</cluster>
+        <service-name>HZ-SERVER-SERVICE</service-name>
+      </aws>
+    </join>
+  </network>
+
+  <metrics enabled="true">
+    <management-center enabled="true">
+      <retention-seconds>5</retention-seconds>
+    </management-center>
+    <jmx enabled="false"/>
+  </metrics>
+  <management-center scripting-enabled="true">
+    http://hz-mgmt-service.hz-discovery:8080/hazelcast-mancenter
+  </management-center>
 </hazelcast>
