@@ -125,6 +125,9 @@ Resources:
       TargetType: ip
       Port: 8080
       Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60
       VpcId:
         Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
   HzServerLoadBalancerRule:
@@ -153,6 +156,9 @@ Resources:
       TargetType: ip
       Port: 8080
       Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60
       VpcId:
         Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
   HzClientLoadBalancerRule:
@@ -181,6 +187,9 @@ Resources:
       TargetType: ip
       Port: 8080
       Protocol: HTTP
+      TargetGroupAttributes:
+        - Key: deregistration_delay.timeout_seconds
+          Value: 60
       VpcId:
         Fn::ImportValue: !Join [ ':', [ !Ref 'VpcStackName', 'VPCId' ] ]
   HzMgmtLoadBalancerRule:
