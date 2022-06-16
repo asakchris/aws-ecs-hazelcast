@@ -17,3 +17,7 @@ management:
 spring:
   application:
     name: Hazecast-Client
+
+logging:
+  level:
+    com.hazelcast: DEBUG

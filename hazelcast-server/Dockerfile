@@ -1,7 +1,18 @@
-FROM openjdk:8-jdk-alpine
-VOLUME /tmp
-ARG DEPENDENCY=target/dependency
-COPY ${DEPENDENCY}/BOOT-INF/lib /app/lib
-COPY ${DEPENDENCY}/META-INF /app/META-INF
-COPY ${DEPENDENCY}/BOOT-INF/classes /app
-ENTRYPOINT java ${JAVA_OPTS} -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -cp app:app/lib/* com.example.server.Application
+# the first stage of build will extract the layers
+FROM amazoncorretto:18 as builder
+ARG ARTIFACT
+WORKDIR application
+COPY ${ARTIFACT} application.jar
+RUN java -Djarmode=layertools -jar application.jar extract
+
+# the second stage of build will copy the extracted layers
+FROM amazoncorretto:18
+# Copy from previous stage
+WORKDIR /opt/docker/application
+COPY --from=builder \
+    application/dependencies/ application/spring-boot-loader/ \
+    application/snapshot-dependencies/ application/application/ ./
+# Create tmp directory
+RUN mkdir -p /app/tmp \
+    && chmod 700 /app/tmp
+ENTRYPOINT ["bash", "-c", "java ${JAVA_OPTS} org.springframework.boot.loader.JarLauncher"]

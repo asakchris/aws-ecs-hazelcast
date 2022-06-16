@@ -1,30 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <hazelcast-client xmlns="http://www.hazelcast.com/schema/client-config"
-                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                  xsi:schemaLocation="http://www.hazelcast.com/schema/client-config
-                  http://www.hazelcast.com/schema/client-config/hazelcast-client-config-4.0.xsd">
-    <cluster-name>aws-hz-cluster</cluster-name>
-    <instance-name>client-aws</instance-name>
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.hazelcast.com/schema/client-config
+                  http://www.hazelcast.com/schema/client-config/hazelcast-client-config-5.1.xsd">
+  <cluster-name>aws-hz-cluster</cluster-name>
+  <instance-name>client-aws</instance-name>
 
-    <!--<properties>
-        <property name="hazelcast.discovery.enabled">true</property>
-    </properties>-->
+  <!--<properties>
+      <property name="hazelcast.discovery.enabled">true</property>
+  </properties>-->
 
-    <network>
-        <aws enabled="true">
-            <hz-port>5701-5702</hz-port>
-            <cluster>HZ-DISCOVERY-ECS-CLUSTER</cluster>
-            <service-name>HZ-SERVER-SERVICE</service-name>
-        </aws>
-    </network>
+  <network>
+    <aws connection-timeout-seconds="30">
+      <hz-port>5701-5702</hz-port>
+      <cluster>HZ-DISCOVERY-ECS-CLUSTER</cluster>
+      <service-name>HZ-SERVER-SERVICE</service-name>
+      <use-public-ip>true</use-public-ip>
+    </aws>
+  </network>
 
-    <connection-strategy async-start="true" reconnect-mode="ASYNC">
-        <connection-retry>
-            <initial-backoff-millis>2000</initial-backoff-millis>
-            <max-backoff-millis>60000</max-backoff-millis>
-            <multiplier>3</multiplier>
-            <cluster-connect-timeout-millis>5000</cluster-connect-timeout-millis>
-            <jitter>0.5</jitter>
-        </connection-retry>
-    </connection-strategy>
+  <connection-strategy async-start="true" reconnect-mode="ASYNC">
+    <connection-retry>
+      <initial-backoff-millis>2000</initial-backoff-millis>
+      <max-backoff-millis>60000</max-backoff-millis>
+      <multiplier>3</multiplier>
+      <cluster-connect-timeout-millis>30000</cluster-connect-timeout-millis>
+      <jitter>0.5</jitter>
+    </connection-retry>
+  </connection-strategy>
 </hazelcast-client>

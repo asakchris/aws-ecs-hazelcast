@@ -357,7 +357,7 @@ Resources:
             - ContainerPort: 5701
           Environment:
             - Name: JAVA_OPTS
-              Value: -Dspring.profiles.active=aws
+              Value: -Dspring.profiles.active=aws -XshowSettings:vm -XX:+PrintFlagsFinal
           LogConfiguration:
             LogDriver: awslogs
             Options:
@@ -381,7 +381,7 @@ Resources:
       DesiredCount: 2
       NetworkConfiguration:
         AwsvpcConfiguration:
-          AssignPublicIp: DISABLED
+          AssignPublicIp: ENABLED
           SecurityGroups:
             - !Ref ContainerSecurityGroup
           Subnets:
