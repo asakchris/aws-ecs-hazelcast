@@ -11,7 +11,7 @@
   </properties>-->
 
   <network>
-    <aws connection-timeout-seconds="30">
+    <aws enabled="true" connection-timeout-seconds="30">
       <hz-port>5701-5702</hz-port>
       <cluster>HZ-DISCOVERY-ECS-CLUSTER</cluster>
       <service-name>HZ-SERVER-SERVICE</service-name>

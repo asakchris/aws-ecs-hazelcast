@@ -16,7 +16,7 @@
     </interfaces>
     <join>
       <multicast enabled="false"/>
-      <aws>
+      <aws enabled="true">
         <hz-port>5701</hz-port>
         <cluster>HZ-DISCOVERY-ECS-CLUSTER</cluster>
         <service-name>HZ-SERVER-SERVICE</service-name>
