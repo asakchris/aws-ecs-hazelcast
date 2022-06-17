@@ -11,15 +11,18 @@
   </properties>-->
 
   <network>
-    <aws enabled="true" connection-timeout-seconds="30">
-      <hz-port>5701-5702</hz-port>
+    <aws enabled="true">
+      <hz-port>5701</hz-port>
       <cluster>HZ-DISCOVERY-ECS-CLUSTER</cluster>
       <service-name>HZ-SERVER-SERVICE</service-name>
+      <connection-timeout-seconds>30</connection-timeout-seconds>
+      <read-timeout-seconds>30</read-timeout-seconds>
+      <connection-retries>4</connection-retries>
       <use-public-ip>true</use-public-ip>
     </aws>
   </network>
 
-  <connection-strategy async-start="true" reconnect-mode="ASYNC">
+  <!--<connection-strategy async-start="true" reconnect-mode="ASYNC">
     <connection-retry>
       <initial-backoff-millis>2000</initial-backoff-millis>
       <max-backoff-millis>60000</max-backoff-millis>
@@ -27,5 +30,5 @@
       <cluster-connect-timeout-millis>30000</cluster-connect-timeout-millis>
       <jitter>0.5</jitter>
     </connection-retry>
-  </connection-strategy>
+  </connection-strategy>-->
 </hazelcast-client>

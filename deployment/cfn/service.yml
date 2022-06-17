@@ -240,6 +240,7 @@ Resources:
                   # Allow ECS container to access ECS tasks
                   - 'ecs:ListTasks'
                   - 'ecs:DescribeTasks'
+                  - 'ec2:DescribeNetworkInterfaces'
                 Resource: '*'
 
   # HZ Discovery POC ECS Cluster
